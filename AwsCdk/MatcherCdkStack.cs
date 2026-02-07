@@ -38,7 +38,7 @@ public sealed class MatcherCdkStack : Stack
             UserName = user.UserName
         });
 
-        var parameter = SaveParameter(accessKey, logGroup, videoRegisteredQueue, config);
+        var parameter = SaveParameter(logGroup, videoRegisteredQueue, config);
         parameter.GrantRead(user);
 
         Out("Config", JsonConvert.SerializeObject(config));
@@ -73,6 +73,16 @@ public sealed class MatcherCdkStack : Stack
             "UpdateVideoScenesLambda",
             config.UpdateVideoScenesLambdaName);
         updateVideoStatusLambda.GrantInvoke(user);
+
+        var loanApiFunction = Function.FromFunctionAttributes(
+            this,
+            "LoanApiFunction",
+            new FunctionAttributes
+            {
+                FunctionArn = config.LoanApiFunctionArn,
+                SkipPermissions = true
+            });
+        loanApiFunction.GrantInvoke(user);
     }
 
     private ILogGroup CreateLogGroup()
@@ -139,7 +149,6 @@ public sealed class MatcherCdkStack : Stack
     }
 
     private StringParameter SaveParameter(
-        CfnAccessKey accessKey,
         ILogGroup logGroup,
         IQueue videoRegisteredQueue,
         MatcherCdkStackConfig config)
@@ -148,7 +157,7 @@ public sealed class MatcherCdkStack : Stack
         {
             aws_access_key_id = "Should be stored locally",
             aws_secret_access_key = "Should be stored locally",
-            loan_api_token = config.LoanApiToken,
+            loan_api_function_arn = config.LoanApiFunctionArn,
             log_group_name = logGroup.LogGroupName,
             log_level = "INFO",
             min_episode_number = 2,

@@ -33,7 +33,7 @@ class _Config:
 
     @property
     @_add_name
-    def loan_api_token(self, name: str = "") -> str:
+    def loan_api_function_arn(self, name: str = "") -> str:
         return self._get_value(name)
 
     @property

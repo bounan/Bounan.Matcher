@@ -1,6 +1,3 @@
-[submodule "LoanApi"]
-	path = LoanApi
-	url = git@github.com:HRAshton/LoanApi.py.git
 [submodule "Common"]
 	path = Common
 	url = git@github.com:HRAshton/BoUnAn.Common.git

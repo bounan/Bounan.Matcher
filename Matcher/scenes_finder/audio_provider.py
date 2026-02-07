@@ -3,6 +3,7 @@ import os
 from typing import Iterator
 
 import m3u8
+from m3u8 import SegmentList, Segment
 
 from Matcher.config.config import Config
 from Matcher.helpers.not_none import not_none
@@ -85,9 +86,14 @@ class AudioProvider:
         current_duration = 0.0
         segments = []
 
-        segment_iter = playlist.segments if opening else reversed(playlist.segments)
+        segment_iter: list[Segment] = playlist.segments if opening else reversed(playlist.segments)
         for segment in segment_iter:
-            segments.append(not_none(segment.uri)) if opening else segments.insert(0, not_none(segment.uri))
+            uri = not_none(segment.absolute_uri)
+            if opening:
+                segments.append(uri)
+            else:
+                segments.insert(0, uri)
+
             current_duration += not_none(segment.duration)
             if current_duration >= Config.seconds_to_match:
                 break

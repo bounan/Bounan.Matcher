@@ -4,13 +4,13 @@ import warnings
 from statistics import median
 
 import m3u8
+import requests
 from m3u8 import M3U8
 from series_intro_recognizer.config import Config as SirConfig
 from series_intro_recognizer.processors.audio_files import recognise_from_audio_files_with_offsets
 
 from Common.py.models import VideoKey, Interval, Scenes
-from LoanApi.LoanApi.get_playlist import get_playlist
-from LoanApi.LoanApi.models import AvailableVideo, DownloadableVideo
+from Matcher.clients.loanapi_client import get_video
 from Matcher.config.config import Config
 from Matcher.helpers.not_none import not_none
 from Matcher.scenes_finder.audio_provider import AudioProvider
@@ -18,11 +18,13 @@ from Matcher.scenes_finder.audio_provider import AudioProvider
 logger = logging.getLogger(__name__)
 
 
-def find_scenes(videos_to_process: list[AvailableVideo]) -> list[tuple[VideoKey, Scenes]]:
+def find_scenes(my_anime_list_id: int,
+                dub: str,
+                episodes_to_process: list[int]) -> list[tuple[VideoKey, Scenes]]:
     logger.debug("Processing videos")
 
-    playlists_and_durations = [_get_playlist_and_duration(video)
-                               for video in videos_to_process]
+    playlists_and_durations = [_get_playlist_and_duration(my_anime_list_id, dub, episode)
+                               for episode in episodes_to_process]
 
     empty_playlist_indexes = [i for i, playlist_and_duration in enumerate(playlists_and_durations)
                               if playlist_and_duration is None]
@@ -38,8 +40,8 @@ def find_scenes(videos_to_process: list[AvailableVideo]) -> list[tuple[VideoKey,
     for index in empty_playlist_indexes:
         all_scenes.insert(index, Scenes(None, None, None))
 
-    video_keys = [VideoKey(video.my_anime_list_id, video.dub, video.episode)
-                  for video in videos_to_process]
+    video_keys = [VideoKey(my_anime_list_id, dub, episode)
+                  for episode in episodes_to_process]
     result = list(zip(video_keys, all_scenes))
 
     return result
@@ -60,17 +62,23 @@ def _get_scenes_by_playlists(playlists_and_durations: list[tuple[M3U8, float]]) 
     return result
 
 
-def _get_playlist_and_duration(video: DownloadableVideo) -> tuple[m3u8.M3U8, float] | None:
-    logger.info(f"Getting playlist for video {video.id}")
-    playlist_content = get_playlist(video)
-    playlist = m3u8.loads(playlist_content)
+def _get_playlist_and_duration(my_anime_list_id: int,
+                               dub: str,
+                               episode: int) -> tuple[m3u8.M3U8, float] | None:
+    logger.info(f"Getting playlist for episode {episode}")
+    playlists = get_video(my_anime_list_id, dub, episode).playlists
+
+    lowest_quality = min(playlists.keys(), key=lambda quality: int(quality))
+    lowest_quality_playlist = playlists[lowest_quality]
+
+    playlist = m3u8.load(lowest_quality_playlist)
     if not playlist.segments:
-        logger.warning(f"Skipping video {video.id} because it has no segments")
+        logger.warning(f"Skipping episode {episode} because it has no segments")
         return None
 
     total_duration = sum([not_none(segment.duration) for segment in playlist.segments])
     if total_duration < 2 * Config.seconds_to_match:
-        logger.warning(f"Skipping video {video.id} because it's too short ({total_duration}s)")
+        logger.warning(f"Skipping episode {episode} because it's too short ({total_duration}s)")
         return None
 
     return playlist, total_duration
