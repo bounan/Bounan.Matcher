@@ -3,7 +3,7 @@ import os
 from typing import Iterator
 
 import m3u8
-from m3u8 import SegmentList, Segment
+from m3u8 import Segment
 
 from Matcher.config.config import Config
 from Matcher.helpers.not_none import not_none
@@ -24,10 +24,12 @@ class AudioProvider:
 
     _playlists: list[m3u8.M3U8]
     _opening: bool
+    _files_dir: str
 
-    def __init__(self, playlists: list[m3u8.M3U8], opening: bool):
+    def __init__(self, playlists: list[m3u8.M3U8], opening: bool, files_dir: str):
         self._playlists = playlists
         self._opening = opening
+        self._files_dir = files_dir
 
     def get_iterator(self) -> Iterator[tuple[str, float, float]]:
         """Generator that downloads and merges .wav files for each playlist."""
@@ -39,8 +41,8 @@ class AudioProvider:
             return
 
         config_dict = Config.export()
-        with PreRequestQueue[[m3u8.M3U8, bool, int], tuple[str, float]](config_dict) as queue:
-            queue.pre_request(0, self._get_wav, self._playlists[0], self._opening, 0)
+        with PreRequestQueue[[m3u8.M3U8, bool, int, str], tuple[str, float]](config_dict) as queue:
+            queue.pre_request(0, self._get_wav, self._playlists[0], self._opening, 0, self._files_dir)
 
             for i, playlist in enumerate(self._playlists):
 
@@ -48,7 +50,8 @@ class AudioProvider:
                 wav_path, segments_duration = queue.pop_result(i)
                 if i + 1 < len(self._playlists):
                     # Start next download in advance
-                    queue.pre_request(i + 1, self._get_wav, self._playlists[i + 1], self._opening, i + 1)
+                    queue.pre_request(i + 1, self._get_wav,
+                                      self._playlists[i + 1], self._opening, i + 1, self._files_dir)
 
                 truncated_duration = min(segments_duration, Config.seconds_to_match)
                 offset = 0 if self._opening else max(segments_duration - Config.seconds_to_match, 0)
@@ -68,13 +71,13 @@ class AudioProvider:
         return self._truncated_durations_per_episode
 
     @staticmethod
-    def _get_wav(playlist: m3u8.M3U8, opening: bool, episode: int) -> tuple[str, float]:
+    def _get_wav(playlist: m3u8.M3U8, opening: bool, episode: int, files_dir: str) -> tuple[str, float]:
         """
         Downloads and merges audio segments into a single wav file.
         Warn: this method is called in separate subprocesses.
         """
         segments, current_duration = AudioProvider._build_segments_list(playlist, opening)
-        wav_path = download_and_merge_parts(episode, segments)
+        wav_path = download_and_merge_parts(episode, segments, files_dir)
         return wav_path, current_duration
 
     @staticmethod

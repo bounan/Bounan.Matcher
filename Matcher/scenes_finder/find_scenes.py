@@ -1,5 +1,6 @@
 import logging
 import math
+import tempfile
 import warnings
 from statistics import median
 
@@ -86,28 +87,30 @@ def _get_playlist_and_duration(my_anime_list_id: int,
 
 def _get_openings(playlists_and_durations: list[tuple[M3U8, float]], sir_config: SirConfig) -> list[Interval]:
     playlists = [playlist for playlist, _ in playlists_and_durations]
-    wav_processor = AudioProvider(playlists, True)
-    opening_iter = wav_processor.get_iterator()
-    lib_openings = recognise_from_audio_files_with_offsets(opening_iter, sir_config)
-    openings = [Interval(opening.start, opening.end) for opening in lib_openings]
+    with tempfile.TemporaryDirectory(dir=Config.temp_dir) as temp_dir:
+        wav_processor = AudioProvider(playlists, True, temp_dir)
+        opening_iter = wav_processor.get_iterator()
+        lib_openings = recognise_from_audio_files_with_offsets(opening_iter, sir_config)
+        openings = [Interval(opening.start, opening.end) for opening in lib_openings]
 
-    truncated_durations = wav_processor.truncated_durations
-    fixed_openings: list[Interval] = _fix_openings(openings, playlists_and_durations, truncated_durations)
+        truncated_durations = wav_processor.truncated_durations
+        fixed_openings: list[Interval] = _fix_openings(openings, playlists_and_durations, truncated_durations)
 
     return fixed_openings
 
 
 def _get_endings(playlists_and_durations: list[tuple[M3U8, float]], sir_config: SirConfig) -> list[Interval]:
     playlists = [playlist for playlist, _ in playlists_and_durations]
-    wav_processor = AudioProvider(playlists, False)
-    ending_iter = wav_processor.get_iterator()
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
-        lib_endings = recognise_from_audio_files_with_offsets(ending_iter, sir_config)
-        endings = [Interval(ending.start, ending.end) for ending in lib_endings]
+    with tempfile.TemporaryDirectory(dir=Config.temp_dir) as temp_dir:
+        wav_processor = AudioProvider(playlists, False, temp_dir)
+        ending_iter = wav_processor.get_iterator()
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            lib_endings = recognise_from_audio_files_with_offsets(ending_iter, sir_config)
+            endings = [Interval(ending.start, ending.end) for ending in lib_endings]
 
-    truncated_durations = wav_processor.truncated_durations
-    fixed_endings: list[Interval] = _fix_endings(endings, playlists_and_durations, truncated_durations)
+        truncated_durations = wav_processor.truncated_durations
+        fixed_endings: list[Interval] = _fix_endings(endings, playlists_and_durations, truncated_durations)
 
     return fixed_endings
 
