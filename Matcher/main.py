@@ -140,6 +140,7 @@ def main() -> None:
     setup_logging()
 
     logger.info("Starting the data processing...")
+    consecutive_exceptions = 0
     while True:
         logger.info("Getting the data...")
 
@@ -153,12 +154,20 @@ def main() -> None:
                 continue
 
             _process_videos(videos_to_match, force=False)
+            consecutive_exceptions = 0
         except KeyboardInterrupt:
             logger.error("Shutting down...")
             break
         except Exception as ex:
-            logger.error(f"An error occurred: {ex}. "
-                         f"{[x for x in traceback.TracebackException.from_exception(ex).format()]}")
+            consecutive_exceptions += 1
+
+            tb_lines = [x for x in traceback.TracebackException.from_exception(ex).format()]
+            if consecutive_exceptions % 3 == 0:
+                logger.error(f"An error occurred (#{consecutive_exceptions} in a row): {ex}. "
+                             f"{tb_lines}")
+            else:
+                logger.warning(f"An error occurred (#{consecutive_exceptions} in a row): {ex}.")
+
             if len(videos_to_match) > 0:
                 animan_client.upload_empty_scenes(videos_to_match)
             logger.info("Waiting for 3 seconds...")
