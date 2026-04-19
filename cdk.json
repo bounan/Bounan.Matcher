@@ -1,5 +1,5 @@
 {
-  "app": "dotnet run --project AwsCdk/AwsCdk.csproj",
+  "app": ".\\.venv\\Scripts\\python.exe -m infra.app",
   "context": {
     "@aws-cdk/aws-lambda:recognizeLayerVersion": true,
     "@aws-cdk/core:checkSecretUsage": true,
