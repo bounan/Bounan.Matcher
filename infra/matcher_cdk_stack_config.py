@@ -9,19 +9,21 @@ class MatcherCdkStackConfig:
     def __init__(self, cdk_prefix: str) -> None:
         local_config = self._load_local_config()
 
-        self.alert_email = self._get_cdk_value(cdk_prefix, "AlertEmail", local_config)
-        self.loan_api_function_arn = self._get_cdk_value(cdk_prefix, "LoanApiFunctionArn", local_config)
+        self.alert_email = self._get_cdk_value(cdk_prefix, "alert-email", local_config)
+        self.loan_api_function_arn = self._get_cdk_value(cdk_prefix, "loan-api-function-arn", local_config)
         self.get_series_to_match_lambda_name = self._get_cdk_value(
             cdk_prefix,
-            "GetSeriesToMatchLambdaName",
+            "get-series-to-match",
             local_config,
         )
         self.update_video_scenes_lambda_name = self._get_cdk_value(
             cdk_prefix,
-            "UpdateVideoScenesLambdaName",
+            "update-video-scenes",
             local_config,
         )
-        self.video_registered_topic_arn = self._get_cdk_value(cdk_prefix, "VideoRegisteredTopicArn", local_config)
+        self.video_registered_topic_arn = self._get_cdk_value(cdk_prefix,
+                                                              "video-registered-sns-topic-arn",
+                                                              local_config)
 
     @staticmethod
     def _load_local_config() -> dict[str, str]:
