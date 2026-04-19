@@ -29,7 +29,7 @@ def _ensure_if_all_videos_for_same_group(videos_to_match: list[VideoKey]) -> Non
             raise ValueError("All videos are not for the same group.")
 
 
-def _get_episodes_to_process(videos_to_match: list[VideoKey], force: bool) -> list[int]:
+def _get_episodes_to_process(videos_to_match: list[VideoKey], force_process_all_season: bool) -> list[int]:
     """
     Get videos to process.
     Returns the same list of videos extended with N more videos before and after
@@ -41,7 +41,7 @@ def _get_episodes_to_process(videos_to_match: list[VideoKey], force: bool) -> li
 
     available_episodes = get_episodes(videos_to_match[0].my_anime_list_id,
                                       videos_to_match[0].dub)
-    if force:
+    if force_process_all_season:
         if len(available_episodes) < 27:
             return available_episodes
         else:
@@ -91,7 +91,7 @@ def _process_batch(my_anime_list_id: int, dub: str, episodes_to_process: list[in
         logger.warning("Uploaded empty scenes.")
 
 
-def _process_videos(videos_to_match: list[VideoKey], force: bool) -> None:
+def _process_videos(videos_to_match: list[VideoKey], force_process_all_season: bool) -> None:
     logger.info(f"Received {len(videos_to_match)} videos to match: {videos_to_match}.")
 
     _ensure_if_all_videos_for_same_group(videos_to_match)
@@ -99,7 +99,7 @@ def _process_videos(videos_to_match: list[VideoKey], force: bool) -> None:
     dub = videos_to_match[0].dub
     logger.info(f"All videos are for the same group: my_anime_list_id={my_anime_list_id}, dub={dub}.")
 
-    episodes_to_process = _get_episodes_to_process(videos_to_match, force)
+    episodes_to_process = _get_episodes_to_process(videos_to_match, force_process_all_season)
     if len(episodes_to_process) < Config.min_episode_number:
         logger.info("Not enough videos to process. Waiting for new videos...")
         animan_client.upload_empty_scenes(videos_to_match)
@@ -107,7 +107,7 @@ def _process_videos(videos_to_match: list[VideoKey], force: bool) -> None:
 
     unavailable_videos = [video for video in videos_to_match
                           if video.episode not in episodes_to_process]
-    if len(unavailable_videos) > 0 and not force:
+    if len(unavailable_videos) > 0 and not force_process_all_season:
         logger.info(f"{len(unavailable_videos)}/{len(videos_to_match)} videos are unavailable: {unavailable_videos}")
         animan_client.upload_empty_scenes(unavailable_videos)
         return
@@ -153,7 +153,7 @@ def main() -> None:
                 sqs_client.wait_for_notification()
                 continue
 
-            _process_videos(videos_to_match, force=False)
+            _process_videos(videos_to_match, force_process_all_season=False)
             consecutive_exceptions = 0
         except KeyboardInterrupt:
             logger.error("Shutting down...")
