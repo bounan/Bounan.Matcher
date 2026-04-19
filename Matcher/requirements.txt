@@ -1,10 +1,10 @@
-aiohttp>=3.13.3
-boto3>=1.42.44
+aiohttp>=3.13.5
+boto3>=1.42.91
 dataclasses-json>=0.6.7
-python-dotenv>=1.2.1
+python-dotenv>=1.2.2
 ffmpeg-python>=0.2.0
 m3u8>=6.0.0
-requests>=2.32.5
+requests>=2.33.1
 retry>=0.9.2
-series_intro_recognizer>=1.0.5
+series_intro_recognizer>=1.2.0
 watchtower>=3.4.0
