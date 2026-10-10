@@ -141,6 +141,7 @@ def main() -> None:
 
     logger.info("Starting the data processing...")
     consecutive_exceptions = 0
+    handled_videos = False
     while True:
         logger.info("Getting the data...")
 
@@ -149,11 +150,15 @@ def main() -> None:
             videos_to_match_res = animan_client.get_videos_to_match()
             videos_to_match = videos_to_match_res.videos_to_match
             if len(videos_to_match) == 0:
+                if handled_videos:
+                    logger.info("All videos processed. Stopping to release memory...")
+                    break
                 logger.info("No videos to match. Waiting for new videos...")
                 sqs_client.wait_for_notification()
                 continue
 
             _process_videos(videos_to_match, force_process_all_season=False)
+            handled_videos = True
             consecutive_exceptions = 0
         except KeyboardInterrupt:
             logger.error("Shutting down...")

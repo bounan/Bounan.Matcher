@@ -51,3 +51,5 @@ Run the worker with:
 ```
 
 The run script passes `--device nvidia.com/gpu=all` and the WSL CUDA paths explicitly. If the Podman machine is recreated, repeat the CDI setup because `/etc/cdi/wsl-nvidia.yaml` lives inside the machine.
+
+The worker waits for SQS notifications when it starts with no pending videos. After handling videos, it finishes all available work and exits when the API reports no more videos to match. The run script uses `--restart=always` so Podman restarts it with a fresh process before it waits for the next notification. An existing container must be recreated with the updated run script to receive this restart policy and code.
